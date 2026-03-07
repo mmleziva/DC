@@ -354,9 +354,7 @@ int main(int argc, char** argv)
              step= FUSE;
              probrzd=1; //zapina odpocitani prodlevy pro vypinani rele
              LEDC=1;  //rozsvit cervenou
- #ifdef MASTER
-                MASTER_OUT=0;
- #endif
+ 
        }
        else
        if(fil.NARAZ && (step != PO_NARAZU)&&(step != GOVPRED)&& (step != PWMVPRED))  //pri narazu vzad
@@ -537,7 +535,8 @@ int main(int argc, char** argv)
             
         case READY_VZAD: //pripraven pro zpatecku
             if(!AKCEL_SEP) ENA_GO= 1;
-#if defined (NUCENA) || defined (MASTER)            
+#if defined (NUCENA) 
+ //|| defined (MASTER)            
             if(!fil.START_IN)
 #else
             if(fh.START_IN)
@@ -645,7 +644,8 @@ int main(int argc, char** argv)
                  LEDPORT |= LEDORAN;
                  zpozdeni=1;   //zacina pocitat zpozdeni pro test vybite bat.
              }
-#if defined (NUCENA) || defined (MASTER)
+#if defined (NUCENA)
+//|| defined (MASTER)
              
              else
                  if(!fil.START_IN)
@@ -656,9 +656,9 @@ int main(int argc, char** argv)
                      LEDZ=1;
                      step= READY;  
                      zpozdeni=1; //zacina pocitat zpozdeni pro test vybite bat.
-#ifdef MASTER
-                    MASTER_OUT=0;
-#endif
+//#ifdef MASTER
+//                    MASTER_OUT=0;
+//#endif
                  }
 #endif
              else
@@ -873,6 +873,9 @@ int main(int argc, char** argv)
             {
                 CCPR1L= 0;
                 CCPR2L= 0;
+ #ifdef MASTER
+                MASTER_OUT=0;
+ #endif
                 LEDPORT &= LEDONEG;//obe LED zhasnuty
                 LEDZ= 1;
                 step= READY;
