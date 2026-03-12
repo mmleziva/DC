@@ -6,8 +6,8 @@
  */
 //#define TEST
 //#define ACU24V
-//#define NUCENA   //zpatecka
-#define MASTER   //zpatecka
+#define NUCENA   //zpatecka
+//#define MASTER   //
 //#define TETA
 //#define DRON
 #include <stdio.h>
@@ -145,7 +145,6 @@ union
     };
 }
 fil, fh;  // filtr, hrana vstupu
-//} ai,  fil, fh,fd;  //vzorek, filtr, hrany vstupu
 
         //16bit. slovo w=[H,L]
 typedef union
@@ -163,8 +162,9 @@ _Bool PO_BRZDENI;
 _Bool PAUSE;// priznak pauza
 _Bool POJISTKA;
 _Bool ULOW, LBLIK, QBLIK, AKCEL_SEP, VYB;
+_Bool ZPET=0;
 uint8_t in[8], set, res, film ;//prom. fitru
-uint8_t step,stepold, k, j ,lt,ltnaraz, prodleva,probrzd,startime;//krok programu, predch. krok,.., citac prodlevy 50 ms 
+uint8_t step, k, j ,lt,ltnaraz, prodleva,probrzd,startime;//krok programu, predch. krok,.., citac prodlevy 50 ms 
 uint8_t plyn,blik,brac,pb;//prepoctena hod. akc.do  pwm,  odmer. blik.LED, stav brzd. pedalu, citac po brzdeni
 uint16_t baterie,akcel,fuse,baterfil, akcelfil,fusefil,zpozdeni;//, naratim;;
 uint32_t timvyp;
@@ -284,7 +284,6 @@ int main(int argc, char** argv)
    {    
      CLRWDT();  //clear watchdog timer
      if(TMR1IF)//2ms cyklus
- //    if(TMR2IF)//2ms cyklus
      {
          TMR1=-2000;
          TMR1IF =0;
@@ -326,7 +325,6 @@ int main(int argc, char** argv)
        AKCEL_SEP=(akcelfil > AKCMIN16b);
 #ifndef MASTER 
        BEZP_RELE= AKCEL_SEP;     
-       //if(!AKCEL_SEP) ENA_GO= 1;
 #else
        if(pulsmaster > 0)
        {
@@ -357,7 +355,8 @@ int main(int argc, char** argv)
  
        }
        else
-       if(fil.NARAZ && (step != PO_NARAZU)&&(step != GOVPRED)&& (step != PWMVPRED))  //pri narazu vzad
+       //if(fil.NARAZ && (step != PO_NARAZU)&&(step != GOVPRED)&& (step != PWMVPRED))  //pri narazu vzad
+       if(fil.NARAZ && (step != PO_NARAZU) && ZPET)  //pri narazu vzad
        {
 #ifdef MASTER
            MASTER_OUT=0;
@@ -374,7 +373,6 @@ int main(int argc, char** argv)
        else 
        if((baterfil < UBATOCH) && (step != OCHR_BAT))   //podpetova ochrana baterie  
        {
-             stepold= step;
              LEDPORT &= LEDONEG;      //zhasni obe LED   //nn
              probrzd=1;//zapina odpocitani prodlevy pro vypinani rele
              LEDC= 1;   //n
@@ -382,7 +380,6 @@ int main(int argc, char** argv)
        }
 #endif
        else
- //      if(fh.BRZDA && (step != BRZDENI)&&(step != FUSE)&&(step != PO_NARAZU))     //pouziti  brzdy
        if(fil.BRZDA && (step < BRZDENI))     //pouziti  brzdy , ve stavu po brzdeni   
        {
            probrzd=1;//zapina odpocitani prodlevy pro vypinani rele           
@@ -405,7 +402,6 @@ int main(int argc, char** argv)
        else
        if((baterfil > UBATPRE)&& (step != PREBITA)&&(step != PO_NARAZU))
        {
-           stepold= step;
            probrzd=1;
            step= PREBITA;
            LEDPORT &= LEDONEG;//led zhasnuty //n
@@ -450,7 +446,7 @@ int main(int argc, char** argv)
                zpozdeni=0;
            else
              zpozdeni ++; 
-       }
+         }
        }
        
        if( AKCEL_SEP )   //test oddaleni vypnuti elektroniky
@@ -497,6 +493,7 @@ int main(int argc, char** argv)
             LEDZ=1;
         }
         break;
+        
         case READY: //pripraven pro rozjezd
             if(!AKCEL_SEP) ENA_GO= 1;
             if(PO_BRZDENI)  //nastaveno pri skonceni brzdeni
@@ -521,6 +518,7 @@ int main(int argc, char** argv)
             {
              LEDPORT |= LEDORAN;   //rozsviti zelenou i rudou LED
              step= READY_VZAD;//a prepne na pripraven pro zpatecku
+             ZPET=1;
 #ifdef MASTER
             MASTER_OUT=1;
 #endif
@@ -547,6 +545,7 @@ int main(int argc, char** argv)
 #endif
              LEDPORT &= LEDONEG;//led zhasnuty
              step= READY;
+             ZPET=0;
              LEDZ=1;
             }
             else 
@@ -572,11 +571,9 @@ int main(int argc, char** argv)
             else
             if(prodleva> TIMINC)
             {
-              //  prodleva=0;
                 step = PWMVPRED;
                 CCPR2L= PWMIN;
                 CCPR1L= 0;
-         //       ENA_GO= 0;
                 VYB=0;
             }
             break;
@@ -627,11 +624,9 @@ int main(int argc, char** argv)
             else
             if(prodleva> TIMINC)
             {
-          //      prodleva=0;
                 step = PWMVZAD;
                 CCPR1L= PWMIN;
                 CCPR2L= 0; 
-          //      ENA_GO= 0;
                 VYB=0;
             }
             break;
@@ -644,9 +639,7 @@ int main(int argc, char** argv)
                  LEDPORT |= LEDORAN;
                  zpozdeni=1;   //zacina pocitat zpozdeni pro test vybite bat.
              }
-#if defined (NUCENA)
-//|| defined (MASTER)
-             
+#if defined (NUCENA)             
              else
                  if(!fil.START_IN)
                  {
@@ -655,10 +648,8 @@ int main(int argc, char** argv)
                      LEDPORT &= LEDONEG;
                      LEDZ=1;
                      step= READY;  
+                     ZPET=0;
                      zpozdeni=1; //zacina pocitat zpozdeni pro test vybite bat.
-//#ifdef MASTER
-//                    MASTER_OUT=0;
-//#endif
                  }
 #endif
              else
@@ -693,15 +684,26 @@ int main(int argc, char** argv)
              break;
          
         case BRZDENI: //
-       //     ENA_GO = !AKCEL_SEP;
 #ifdef TETA
             if(!fil.BRZDA) //konec  brzdy  //tt
             {
                 CCPR1L= 0;
                 CCPR2L= 0;
                 LEDPORT &= LEDONEG;//led zhasnuty
-                LEDZ=1;
-                step= READY;  
+   //             LEDZ=1;
+   //             step= READY;
+   //             ZPET=0;
+                if(!ZPET)
+                {
+                   step= READY;
+                   LEDZ=1;
+                }
+                else
+                {
+                   step= READY_VZAD;
+                   LEDPORT |= LEDORAN;                   
+                }
+
             }
             else
             if(probrzd==0)    //brzdeni akceleratorem
@@ -730,24 +732,32 @@ int main(int argc, char** argv)
             if((fh.START_IN)&&(!AKCEL_SEP)) //konec  brzdy  //tt
     #else
              ENA_GO = 1;
-        //    if((fh.START_IN) && (probrzd==0)) //konec  brzdy  //tt
              if((fh.START_IN) && !fil.BRZDA ) //konec  brzdy  //tt
     #endif                    
             {
                 CCPR1L= 0;
                 CCPR2L= 0;
                 LEDPORT &= LEDONEG;//led zhasnuty
-                LEDZ=1;
                 PO_BRZDENI=1;
                 pb=0;
-                step= READY; 
+                if(!ZPET)
+                {
+                   step= READY;
+                   LEDZ=1;
 #ifdef MASTER
-               if(!MASTER_OUT)
-               {
-                MASTER_OUT=1;
-                pulsmaster=50;//100ms puls MASTER_OUT
-               }
+                   if(!MASTER_OUT)
+                   {
+                    MASTER_OUT=1;
+                    pulsmaster=50;//100ms puls MASTER_OUT
+                   }
 #endif
+                }
+                else
+                {
+                   step= READY_VZAD;
+                   LEDPORT |= LEDORAN;
+                   
+                }
             }
             else
             if(probrzd==0)    //brzdeni akceleratorem
@@ -778,8 +788,7 @@ int main(int argc, char** argv)
                         }
                     }
                     else
-                    // if(brac < PWMAX)    //nn
-                   CCPR2L= brac;
+                     CCPR2L= brac;
              }
              CCPR1L= CCPR2L;
             }
@@ -793,6 +802,7 @@ int main(int argc, char** argv)
               LEDPORT &= LEDONEG;//obe LED zhasnuty
               LEDZ= 1;
               step= READY;
+              ZPET=0;
              }
             else
             if(probrzd==0)
@@ -820,11 +830,11 @@ int main(int argc, char** argv)
                    CCPR2L=0;
                 ULOW=0;
                 VYB=0;
-                if((stepold == GOVZAD)||(stepold == READY_VZAD)||(stepold == PWMVZAD))
+                if(ZPET)
                 {
                     LEDPORT |= LEDORAN;//oranz sviti
                     step= READY_VZAD;
-            } 
+                } 
                 else
                 {
                    LEDPORT &= LEDONEG;//obe LED zhasnuty
@@ -845,7 +855,7 @@ int main(int argc, char** argv)
             {
                 CCPR2L=0; //n
                 CCPR1L=0;
-                if((stepold == GOVZAD)||(stepold == READY_VZAD)||(stepold == PWMVZAD))
+                if(ZPET)
                 {
                     LEDPORT |= LEDORAN;//oranz sviti
                     step= READY_VZAD;
@@ -879,6 +889,7 @@ int main(int argc, char** argv)
                 LEDPORT &= LEDONEG;//obe LED zhasnuty
                 LEDZ= 1;
                 step= READY;
+                ZPET=0;
             }
             else
             if(AKCEL_SEP)
