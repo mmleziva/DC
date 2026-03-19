@@ -6,8 +6,8 @@
  */
 //#define TEST
 //#define ACU24V
-#define NUCENA   //zpatecka
-//#define MASTER   //
+//#define NUCENA   //zpatecka
+#define MASTER   //
 //#define TETA
 //#define DRON
 #include <stdio.h>
@@ -396,6 +396,7 @@ int main(int argc, char** argv)
               CCPR1L=0;
               CCPR2L=0;
               step= VYBITA;
+              LEDPORT &= LEDONEG;//led zhasnuty //t
               probrzd=1;
         }
 #ifndef DRON
@@ -429,25 +430,28 @@ int main(int argc, char** argv)
        {
            NAP_OCHRA=0;
        };
-       if(zpozdeni > ZPOZBAT)// po prodleve 30s
+       if((step < BRZDENI) || (step == PO_NARAZU))
        {
-           zpozdeni= 0;
-           if((baterfil< UBAT30)&& VYB)
+           if(zpozdeni > ZPOZBAT)// po prodleve 30s
            {
-               ULOW=1;  //nastav priznak vybite baterie
+                zpozdeni= 0;
+                if((baterfil< UBAT30)&& VYB)
+                {
+                    ULOW=1;  //nastav priznak vybite baterie
+                }
+                VYB=0;
            }
-           VYB=0;
-       }
-       else 
-       {
-         if(zpozdeni > 0)
-         {
-           if(step > BRZDENI )
-               zpozdeni=0;
+           else 
+           if(VYB)    
+             zpozdeni ++;
            else
-             zpozdeni ++; 
-         }
+           if(baterfil < UBATVYB)
+             VYB=1;
+           else           
+             zpozdeni=0;  
        }
+       else
+           zpozdeni=0;
        
        if( AKCEL_SEP )   //test oddaleni vypnuti elektroniky
        {
@@ -574,17 +578,16 @@ int main(int argc, char** argv)
                 step = PWMVPRED;
                 CCPR2L= PWMIN;
                 CCPR1L= 0;
-                VYB=0;
             }
             break;
         case PWMVPRED: //plyn vpred
+             zpozdeni=0; //zacina pocitat zpozdeni pro test vybite bat.
              if(plyn == 0)  //po uvolneni plynu navrat na ready
              {
                  CCPR2L=0;
                  step= READY;   
                  LEDPORT &= LEDONEG;//oranz zhasnuta
                  LEDZ= 1;
-                 zpozdeni=1; //zacina pocitat zpozdeni pro test vybite bat.
                  probrzd=1;
              }
              else
@@ -607,10 +610,7 @@ int main(int argc, char** argv)
               else
               if(plyn < PWMAX)    //nn
                    CCPR2L= plyn;
-             }      
-             ULOW= 0;
-             if(baterfil < UBATVYB)
-                  VYB=1;
+             }     
              break;
 
         case GOVZAD: //prodleva 50ms pred zpateckou
@@ -627,17 +627,16 @@ int main(int argc, char** argv)
                 step = PWMVZAD;
                 CCPR1L= PWMIN;
                 CCPR2L= 0; 
-                VYB=0;
             }
             break;
         case PWMVZAD://plyn zpatecky
+             zpozdeni=0; //zacina pocitat zpozdeni pro test vybite bat.
              if(plyn == 0)
              {
                  CCPR1L=0;
                  probrzd=1;
                  step= READY_VZAD;  
                  LEDPORT |= LEDORAN;
-                 zpozdeni=1;   //zacina pocitat zpozdeni pro test vybite bat.
              }
 #if defined (NUCENA)             
              else
@@ -649,8 +648,7 @@ int main(int argc, char** argv)
                      LEDZ=1;
                      step= READY;  
                      ZPET=0;
-                     zpozdeni=1; //zacina pocitat zpozdeni pro test vybite bat.
-                 }
+                  }
 #endif
              else
              {
@@ -678,10 +676,7 @@ int main(int argc, char** argv)
                       CCPR1L= plyn; //nepridava plyn, resp. okamzite ubira
                }
               }
-              if(baterfil < UBATVYB)
-                    VYB=1;
-              ULOW= 0;
-             break;
+              break;
          
         case BRZDENI: //
 #ifdef TETA
@@ -825,11 +820,10 @@ int main(int argc, char** argv)
         case OCHR_BAT:
             if(baterfil> UBATOK)//testuje napeti bat. OK
             {
-                   LEDPORT &= LEDONEG;//obe LED zhasnuty
-                   CCPR1L=0;
-                   CCPR2L=0;
-                ULOW=0;
-                VYB=0;
+                LEDPORT &= LEDONEG;//obe LED zhasnuty
+                CCPR1L=0;
+                CCPR2L=0;
+                VYB=0; //t
                 if(ZPET)
                 {
                     LEDPORT |= LEDORAN;//oranz sviti
