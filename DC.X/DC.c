@@ -104,7 +104,7 @@
 #define UBATOCH      (KBAT*82)//8,5V 
 #define UBATVYB      (KBAT*110)// 11,4V
 #define UBATOK       (KBAT*102)// 11,0V
-#define UBAT30       (KBAT*115)// 12,0V
+#define UBAT30       (KBAT*119)// 12,5V (KBAT*115)// 12,0V
 #define UBATLOD      (KBAT*137)// 14,5V
 #define UBATHOD      (KBAT*140)// 15V
 #define UBATPRE      (KBAT*152)// 16V
@@ -380,7 +380,7 @@ int main(int argc, char** argv)
        }
 #endif
        else
-       if(fil.BRZDA && (step < BRZDENI))     //pouziti  brzdy , ve stavu po brzdeni   
+       if(fil.BRZDA && ((step < BRZDENI)||(step==VYBITA)))     //pouziti  brzdy , ve stavu po brzdeni   
        {
            probrzd=1;//zapina odpocitani prodlevy pro vypinani rele           
            CCPR1L= 0;
@@ -391,14 +391,18 @@ int main(int argc, char** argv)
            step= BRZDENI;
         }
        else
-       if(ULOW && (step != BRZDENI))    //blikani cervene pri vybite bat.
+       if(ULOW && (step < BRZDENI))    //blikani cervene pri vybite bat.
        {                
               CCPR1L=0;
               CCPR2L=0;
-              step= VYBITA;
-              LEDPORT &= LEDONEG;//led zhasnuty //t
+              if(step != VYBITA)
+              {
+                step= VYBITA;
+                LEDPORT &= LEDONEG;//led zhasnuty //t
+              }
               probrzd=1;
         }
+       
 #ifndef DRON
        else
        if((baterfil > UBATPRE)&& (step != PREBITA)&&(step != PO_NARAZU))
@@ -430,7 +434,8 @@ int main(int argc, char** argv)
        {
            NAP_OCHRA=0;
        };
-       if((step < BRZDENI) || (step == PO_NARAZU))
+     //  if((step < BRZDENI) || (step == PO_NARAZU))
+       if(!ULOW)
        {
            if(zpozdeni > ZPOZBAT)// po prodleve 30s
            {
@@ -442,16 +447,25 @@ int main(int argc, char** argv)
                 VYB=0;
            }
            else 
-           if(VYB)    
-             zpozdeni ++;
+           if(VYB) 
+           {
+               if(baterfil > UBATVYB)
+               {
+                   zpozdeni=0;
+                   VYB=0;
+               }
+               else
+                    zpozdeni ++;
+           }
            else
            if(baterfil < UBATVYB)
              VYB=1;
+               
            else           
              zpozdeni=0;  
        }
-       else
-           zpozdeni=0;
+   //    else
+   //        zpozdeni=0;
        
        if( AKCEL_SEP )   //test oddaleni vypnuti elektroniky
        {
@@ -461,6 +475,7 @@ int main(int argc, char** argv)
        if(timvyp > TIMAX)// test vypnuti po 5 minutach
        {
        //  OUT_START=0;
+              startime=0;
               PORTA=0x0;
               TRISA=0b11111111;
        }
@@ -500,6 +515,8 @@ int main(int argc, char** argv)
         
         case READY: //pripraven pro rozjezd
             if(!AKCEL_SEP) ENA_GO= 1;
+            if(baterfil < UBATVYB)
+                VYB=1;
             if(PO_BRZDENI)  //nastaveno pri skonceni brzdeni
             {
 #ifdef DRON              
@@ -537,6 +554,8 @@ int main(int argc, char** argv)
             
         case READY_VZAD: //pripraven pro zpatecku
             if(!AKCEL_SEP) ENA_GO= 1;
+            if(baterfil < UBATVYB)//t
+                VYB=1;
 #if defined (NUCENA) 
  //|| defined (MASTER)            
             if(!fil.START_IN)
@@ -562,7 +581,27 @@ int main(int argc, char** argv)
             break;
                        
        case VYBITA:
-            LEDC=LBLIK;
+            if(baterfil> UBAT30)//testuje napeti bat. OK
+            {
+                LEDPORT &= LEDONEG;//obe LED zhasnuty
+                CCPR1L=0;
+                CCPR2L=0;
+                //VYB=0; //t
+                ULOW=0;
+                if(ZPET)
+                {
+                    LEDPORT |= LEDORAN;//oranz sviti
+                    step= READY_VZAD;
+                } 
+                else
+                {
+                   LEDPORT &= LEDONEG;//obe LED zhasnuty
+                   LEDZ= 1;
+                   step= READY;
+                }                   
+            } 
+            else
+                LEDC=LBLIK;
             break;   
 
        case GOVPRED: //prodleva 100ms pred rozjezdem
