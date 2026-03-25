@@ -6,9 +6,9 @@
  */
 //#define TEST
 //#define ACU24V
-//#define NUCENA   //zpatecka
-#define MASTER   //
-//#define TETA
+#define NUCENA   //zpatecka
+//#define MASTER   //
+#define TETA
 //#define DRON
 #include <stdio.h>
 #include <stdlib.h>
@@ -388,6 +388,7 @@ int main(int argc, char** argv)
            LEDPORT &= LEDONEG;//led zhasnuty
            LEDC=1;
            fh.START_IN=0;
+           MASTER_OUT=0;
            step= BRZDENI;
         }
        else
@@ -779,17 +780,21 @@ int main(int argc, char** argv)
                    step= READY;
                    LEDZ=1;
 #ifdef MASTER
-                   if(!MASTER_OUT)
-                   {
+ //                  if(!MASTER_OUT)
+  //                 {
                     MASTER_OUT=1;
                     pulsmaster=50;//100ms puls MASTER_OUT
-                   }
+  //                 }
 #endif
                 }
                 else
                 {
                    step= READY_VZAD;
                    LEDPORT |= LEDORAN;
+#ifdef MASTER
+                    MASTER_OUT=1;
+#endif
+
                    
                 }
             }
