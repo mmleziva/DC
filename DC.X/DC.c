@@ -6,9 +6,9 @@
  */
 //#define TEST
 //#define ACU24V
-#define NUCENA   //zpatecka
-//#define MASTER   //
-#define TETA
+//#define NUCENA   //zpatecka
+#define MASTER   //
+//#define TETA
 //#define DRON
 #include <stdio.h>
 #include <stdlib.h>
@@ -245,6 +245,7 @@ int main(int argc, char** argv)
    OPTION_REGbits.nRBPU=0;// pull up
    #ifndef TEST
    TRISA= 0b11100011;
+   RC0=1;
    #else
     TRISA= 0b11101111;//t
     TRISEbits.TRISE0=0;//!t
@@ -479,6 +480,8 @@ int main(int argc, char** argv)
               startime=0;
               PORTA=0x0;
               TRISA=0b11111111;
+              PORTC=0x0;
+              TRISC=0b11111111;
        }
        else
        {
@@ -486,6 +489,7 @@ int main(int argc, char** argv)
 #ifndef  TEST
            PORTA=0b00011100;
            TRISA=0b11100011;
+           RC0=1;
 #else
            PORTA=0b00010000;//t
            TRISA=0b11101111;//t
