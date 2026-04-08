@@ -6,8 +6,8 @@
  */
 //#define TEST
 //#define ACU24V
-//#define NUCENA   //zpatecka
-#define MASTER   //
+#define NUCENA   //zpatecka
+//#define MASTER   //
 //#define TETA
 //#define DRON
 #include <stdio.h>
@@ -164,7 +164,7 @@ _Bool POJISTKA;
 _Bool ULOW, LBLIK, QBLIK, AKCEL_SEP, VYB;
 _Bool ZPET=0;
 uint8_t in[8], set, res, film ;//prom. fitru
-uint8_t step, k, j ,lt,ltnaraz, prodleva,probrzd,startime;//krok programu, predch. krok,.., citac prodlevy 50 ms 
+uint8_t step, k, j ,lt,ltnaraz, prodleva,probrzd,startime,delaybr;//krok programu, predch. krok,.., citac prodlevy 50 ms 
 uint8_t plyn,blik,brac,pb;//prepoctena hod. akc.do  pwm,  odmer. blik.LED, stav brzd. pedalu, citac po brzdeni
 uint16_t baterie,akcel,fuse,baterfil, akcelfil,fusefil,zpozdeni;//, naratim;;
 uint32_t timvyp;
@@ -779,28 +779,30 @@ int main(int argc, char** argv)
                 LEDPORT &= LEDONEG;//led zhasnuty
                 PO_BRZDENI=1;
                 pb=0;
+                delaybr=60;
+#ifdef MASTER
+                MASTER_OUT=1;
+                if(!ZPET)
+                    pulsmaster=50;//100ms puls MASTER_OUT
+#endif
+             }
+             else 
+             if(delaybr > 0)
+             {
+               delaybr--;  
+               if(delaybr==0)
+               {    
                 if(!ZPET)
                 {
                    step= READY;
                    LEDZ=1;
-#ifdef MASTER
- //                  if(!MASTER_OUT)
-  //                 {
-                    MASTER_OUT=1;
-                    pulsmaster=50;//100ms puls MASTER_OUT
-  //                 }
-#endif
                 }
                 else
                 {
                    step= READY_VZAD;
-                   LEDPORT |= LEDORAN;
-#ifdef MASTER
-                    MASTER_OUT=1;
-#endif
-
-                   
+                   LEDPORT |= LEDORAN;                   
                 }
+               }
             }
             else
             if(probrzd==0)    //brzdeni akceleratorem
