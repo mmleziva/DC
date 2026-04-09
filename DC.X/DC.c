@@ -6,8 +6,8 @@
  */
 //#define TEST
 //#define ACU24V
-#define NUCENA   //zpatecka
-//#define MASTER   //
+//#define NUCENA   //zpatecka
+#define MASTER   //
 //#define TETA
 //#define DRON
 #include <stdio.h>
@@ -162,13 +162,13 @@ _Bool PO_BRZDENI;
 _Bool PAUSE;// priznak pauza
 _Bool POJISTKA;
 _Bool ULOW, LBLIK, QBLIK, AKCEL_SEP, VYB;
-_Bool ZPET=0;
+_Bool ZPET=0, ZPETMEM=0;
 uint8_t in[8], set, res, film ;//prom. fitru
-uint8_t step, k, j ,lt,ltnaraz, prodleva,probrzd,startime,delaybr;//krok programu, predch. krok,.., citac prodlevy 50 ms 
+uint8_t step, k, j ,lt,ltnaraz, prodleva,probrzd,startime;//krok programu, predch. krok,.., citac prodlevy 50 ms 
 uint8_t plyn,blik,brac,pb;//prepoctena hod. akc.do  pwm,  odmer. blik.LED, stav brzd. pedalu, citac po brzdeni
 uint16_t baterie,akcel,fuse,baterfil, akcelfil,fusefil,zpozdeni;//, naratim;;
 uint32_t timvyp;
-uint8_t *ptr, pulsmaster;
+uint8_t *ptr, pulsmaster, nulmaster;
 uint16_t adc_read(unsigned char channel)//mereni Adc
 {  
 ADCON0 = (channel << 3) + 0x41;		// !T enable ADC,  osc.8*Tosc
@@ -331,8 +331,20 @@ int main(int argc, char** argv)
        {
            pulsmaster--;
           if(pulsmaster==0)
+          {
               MASTER_OUT=0;
+              nulmaster=50;
+          }
        }    
+       else
+       if(nulmaster > 0)
+       {
+           nulmaster--;
+          if(nulmaster==0)
+          {
+              MASTER_OUT=ZPETMEM;              
+          }  
+       }
 #endif
 #ifdef DRON
         if((step > READY_VZAD) && (step != BRZDENI))
@@ -779,19 +791,12 @@ int main(int argc, char** argv)
                 LEDPORT &= LEDONEG;//led zhasnuty
                 PO_BRZDENI=1;
                 pb=0;
-                delaybr=60;
 #ifdef MASTER
-                MASTER_OUT=1;
-                if(!ZPET)
+                    ZPETMEM= ZPET;
+                    MASTER_OUT=1;
                     pulsmaster=50;//100ms puls MASTER_OUT
 #endif
-             }
-             else 
-             if(delaybr > 0)
-             {
-               delaybr--;  
-               if(delaybr==0)
-               {    
+
                 if(!ZPET)
                 {
                    step= READY;
@@ -800,9 +805,8 @@ int main(int argc, char** argv)
                 else
                 {
                    step= READY_VZAD;
-                   LEDPORT |= LEDORAN;                   
+                   LEDPORT |= LEDORAN;                 
                 }
-               }
             }
             else
             if(probrzd==0)    //brzdeni akceleratorem
